@@ -22,22 +22,33 @@ class _Price_limit:
         self.exchange = exchange
         self.t_s= seconds
         self.t_n = nanos
-
-class _Trade:
-    def __init__(self, price, amount, exchange, timestamp):
-        self.price = price
-        self.amount = amount
-        self.exchange = exchange
-        timestamp=timestamp
-
-
-
+    
+    def get_PriceLimit_json(self):
+        return json.dumps({
+            'price': self.price,
+            'amount': self.amount,
+            'side': self.side,
+            'exchange': self.exchange,
+            'timestamp_seconds': self.t_s,
+            'timestamp_nanos': self.t_n
+        })
 class OrderBookManager:
     def __init__(self):
         self.order_book = {'asks': [], 'bids': []}
         self.order_book_json = {} 
         self.lock = threading.Lock()
-        self.update_event = threading.Event()   
+        self.update_event = threading.Event() 
+        self.channel = None
+        self.code = None
+        self.instrument_class =None
+        self.order_book_bbo = {
+            'bestAsk': None, 
+            'bestBid': None, 
+        }
+        self.order_book_bottom =   {
+            'highAsk': None, 
+            'lowBid': None
+        }
 
     def _apply_order_book_update(self, update):
         side = 'bids' if update.StreamMarketUpdateType == 'UPDATED_BID' else 'asks'
@@ -57,7 +68,7 @@ class OrderBookManager:
                 # Add a new order to the book
                 self.order_book[side].append(_Price_limit(update.price, update.amount, side, update.exchange, update.ts_event.seconds, update.ts_event.nanos))
         # Sort the order book correctly
-        self.order_book[side].sort(key=lambda x: x.price, reverse=(side == 'asks'))
+        self.order_book[side].sort(key=lambda x: x.price, reverse=(side == 'bids'))
         # Remove any zero-amount orders
         self.order_book[side] = [order for order in self.order_book[side] if order.amount > 0]
     
@@ -76,9 +87,6 @@ class OrderBookManager:
                 ))
                 for response in responses:
                     with self.lock:
-                        self.order_book_json = json.dumps({
-                            side: [vars(order) for order in orders] for side, orders in self.order_book.items()
-                        })
                         if response.exchange not in ob_synced and response.update_type == pb_reponse_mu.StreamMarketUpdateResponseV1.StreamMarketUpdateType.SNAPSHOT:
                             # first sync of the order book
                             print("Synced with: ", {response.exchange})
@@ -112,12 +120,24 @@ class OrderBookManager:
                         else :
                             #process the individual Tick level 2 udpate and update the order book
                             self._apply_order_book_update(response)
+                        #update attributes
+                        self.order_book_json = json.dumps({
+                            side: [vars(order) for order in orders] for side, orders in self.order_book.items()
+                        })
+                        self.order_book_bbo['bestBid']=self.order_book['bids'][0].get_PriceLimit_json()
+                        self.order_book_bbo['bestAsk']=self.order_book['asks'][0].get_PriceLimit_json()
+                        self.order_book_bottom['highAsk']=self.order_book['asks'][-1].get_PriceLimit_json()
+                        self.order_book_bottom['lowBid']=self.order_book['bids'][-1].get_PriceLimit_json()
                         self.update_event.set()
         except grpc.RpcError as e:
             print(e.details(), e.code())
             return None  # Return None or an appropriate error indicator
     
     def start(self, channel, exchange, instrument_class, code):
+        #Init
+        self.channel=channel
+        self.code=code
+        self.instrument_class = instrument_class
         # Start the fetching process in a new thread
         thread = threading.Thread(target=self._fetch_order_book_arg, args=(channel, exchange, instrument_class, code))
         thread.daemon = True
@@ -133,7 +153,22 @@ class OrderBookManager:
         with self.lock:
             return self.order_book_json
 
-    
+    def get_order_book_bbo_json(self):
+        #Safely retrieve the latest order book data
+        with self.lock:
+            return self.order_book_bbo
+    def get_order_book_bottom_json(self):
+        #Safely retrieve the latest order book data
+        with self.lock:
+            return self.order_book_bottom    
+class _Trade:
+    def __init__(self, price, amount, exchange, timestamp):
+        self.price = price
+        self.amount = amount
+        self.exchange = exchange
+        timestamp=timestamp
+
+   
 
 
 def test():
