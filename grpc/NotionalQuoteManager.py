@@ -4,15 +4,8 @@ import sys
 import logging
 import os
 import threading
-import json
 import grpc
-import kaikosdk
 from datetime import datetime
-from kaikosdk import sdk_pb2_grpc
-from kaikosdk.core import instrument_criteria_pb2
-from kaikosdk.stream.market_update_v1 import request_pb2 as pb_market_update
-from kaikosdk.stream.market_update_v1 import response_pb2 as pb_reponse_mu
-from kaikosdk.stream.market_update_v1 import commodity_pb2 as pb_commodity
 from OrderbookManager import OrderBookManager
 
 
