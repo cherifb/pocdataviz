@@ -101,7 +101,7 @@ def test():
     call_credentials = grpc.access_token_call_credentials(os.environ['KAIKO_API_KEY'])
     composite_credentials = grpc.composite_channel_credentials(credentials, call_credentials)
     channel_OB = grpc.secure_channel('gateway-v0-grpc.kaiko.ovh', composite_credentials)
-    # Order Book Manager instance
+    # Notional Quote Manager instance
     manager = NotionalQuoteManager()
     # Start processing
     manager.start(channel_OB,exchange, instrument_class,code, notional_amount)
