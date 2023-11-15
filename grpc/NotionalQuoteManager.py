@@ -32,11 +32,15 @@ class NotionalQuoteManager:
                 # Access the updated order book
                 order_book = self.orderBookManager.get_order_book()
                 # Compute the Ask side
-                self.notional_quote_json['ask']= self._calculate_total_price(order_book['asks'], notionalAmount)
+                ask = self._calculate_total_price(order_book['asks'], notionalAmount)
                 #compute the Bid side
-                self.notional_quote_json['bid']= self._calculate_total_price(order_book['bids'], notionalAmount)
-                #set the spread
-                self.notional_quote_json['spread']=self.notional_quote_json['bid']-self.notional_quote_json['ask']
+                bid = self._calculate_total_price(order_book['bids'], notionalAmount)
+                spread=bid-ask
+                #set the variables
+                if spread>0:
+                    self.notional_quote_json['ask']=ask
+                    self.notional_quote_json['bid']=bid
+                    self.notional_quote_json['spread']=spread 
                 #notify of the update
                 self.update_event.set()
 
