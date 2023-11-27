@@ -194,7 +194,6 @@ def test():
     try:
         while True:
             manager.update_event.wait()  # Block until data is updated
-            print("NEW UPDATE")
             print(manager.get_order_book_json())
             manager.update_event.clear()  # Reset the event
     except KeyboardInterrupt:

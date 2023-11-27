@@ -7,6 +7,7 @@ import threading
 import grpc
 from datetime import datetime
 from OrderbookManager import OrderBookManager
+from kaiko_research.kaiko import KaikoAPIWrapper
 
 
 class NotionalQuoteManager:
@@ -81,11 +82,20 @@ class NotionalQuoteManager:
 
 
 def test():
+    # convert Notional in a size
+    kw = KaikoAPIWrapper(os.environ['KAIKO_API_KEY'])
+    print(kw.get_enpoints_information())
+    print(kw.get_endpoint_parameters("Cross Price"))
+    cross_price = kw.get_data("Cross Price", base_assets = "btc", quote_asset = "usd")
+    print (cross_price)
+    input("blah")
     # Requesting user input for the parameters
     exchange = input("Enter the exchange code (e.g., 'cbse'): ")
     instrument_class = input("Enter the instrument class (e.g., 'spot'): ")
-    code = input("Enter the instrument code (e.g., 'btc-usd'): ")
-    notional_amount = int(input ("Enter an integer notional amount: "))
+    base = input("Enter the instrument code (e.g., 'btc'): ")
+    quote = input("Enter the instrument code (e.g., 'usd'): ")
+    code = f"{base}-{quote}"
+    notional_amount = int(input ("Enter th notional amount in USD : "))
     # Redirect print output to the file
     now = datetime.now().strftime("%Y-%m-%d_b%H-%M-%S")
     filename = f"{now}_quote.log"
